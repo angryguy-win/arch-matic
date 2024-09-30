@@ -1,0 +1,22 @@
+[install]
+  auto_run = false
+
+[variables]
+  confirm_password = "password"
+  cpu_microcode = "0xa601203"
+  cpu_type = "AMD Ryzen 9 7900X3D 12-Core Processor"
+  cpu_vendor = "amd"
+  desktop_env = "cosmic"
+  disk_encryption = "no"
+  filesystem = "btrfs"
+  hostname = "angryguy"
+  install_drive = "/dev/nvme0n1"
+  keymap = "us"
+  locale = "en_US.UTF-8"
+  num_cpus = "24"
+  os_info = "OS: linux, Architecture: amd64"
+  password = "password"
+  ram_info = "61"
+  root_password = "yes"
+  timezone = "America/Toronto"
+  username = "ssnow"
