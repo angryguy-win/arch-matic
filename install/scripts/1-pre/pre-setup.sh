@@ -86,7 +86,7 @@ main() {
 
     initial_setup || { print_message ERROR "Initial setup failed"; return 1; }
     mirror_setup || { print_message ERROR "Mirror setup failed"; return 1; }
-    show_drive_list || { print_message ERROR "Drive selection failed"; return 1; }
+    #show_drive_list || { print_message ERROR "Drive selection failed"; return 1; }
     prepare_drive || { print_message ERROR "Drive preparation failed"; return 1; }
 
     print_message OK "Pre-setup process completed successfully"

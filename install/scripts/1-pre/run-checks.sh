@@ -130,9 +130,9 @@ main() {
     process_init "Run Checks"
     print_message INFO "Starting run checks process"
 
-    run_checks
+    #run_checks
     facts_commons
-    ask_for_installation_info
+    #ask_for_installation_info
     # ask_passwords
     check_and_setup_internet
     #ask_for_password

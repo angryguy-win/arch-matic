@@ -3,19 +3,17 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
-	"syscall"
 
 	"embed"
 
 	"github.com/BurntSushi/toml"
-	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -23,9 +21,6 @@ import (
 
 //go:embed install
 var installFiles embed.FS
-
-//go:embed scripts/install.sh
-var installScript string
 
 // Nordic theme colors
 var (
@@ -69,10 +64,8 @@ type Question struct {
 }
 
 type Contact struct {
-	// Define the fields of your Contact struct here
 	Name  string
 	Email string
-	// ... other fields ...
 }
 
 func getDriveInfo() []string {
@@ -131,72 +124,13 @@ func getCPUInfo() (cpuType string, vendor string, microcode string, numCPUs int)
 
 	// If microcode is still unknown, try alternative method for AMD
 	if microcode == "Unknown" && vendor == "amd" {
-		cmd := exec.Command("sh", "-c", "grep -m1 'microcode' /proc/cpuinfo | awk '{print $3}'")
+		cmd := exec.Command("bash", "-c", "grep -m1 'microcode' /proc/cpuinfo | awk '{print $3}'")
 		output, err := cmd.Output()
 		if err == nil {
 			microcode = strings.TrimSpace(string(output))
 		}
 	}
 	return
-}
-
-func initialModel() model {
-	ti := textinput.New()
-	ti.Placeholder = "Type here..."
-	ti.Focus()
-
-	// Initialize the list select component
-	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
-	l.SetShowTitle(false)
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(false)
-
-	driveOptions := getDriveInfo()
-
-	cpuType, cpuVendor, microcode, numCPUs := getCPUInfo()
-	osInfo := fmt.Sprintf("OS: %s, Architecture: %s", runtime.GOOS, runtime.GOARCH)
-
-	var mem syscall.Sysinfo_t
-	syscall.Sysinfo(&mem)
-	totalRAM := mem.Totalram * uint64(mem.Unit) / (1024 * 1024 * 1024) // Convert to GB
-
-	timezone := []string{"UTC", "America/New_York", "America/Toronto", "America/Vancouver", "America/Chicago", "America/Denver",
-		"America/Los_Angeles", "America/Texas", "Europe/London", "Europe/Berlin", "Asia/Tokyo"}
-	locale := []string{"en_US.UTF-8", "de_DE.UTF-8", "fr_FR.UTF-8"}
-	keymap := []string{"us", "uk", "de"}
-	filesystem := []string{"btrfs", "ext4"}
-	desktop_env := []string{"none", "gnome", "kde", "cosmic", "dwm"}
-
-	m := model{
-		questions: []Question{
-			{ID: "username", Text: "Enter username:", Type: "text", Validate: validateUsername},
-			{ID: "password", Text: "Enter password:", Type: "password", Validate: validatePassword},
-			{ID: "confirm_password", Text: "Confirm password:", Type: "password", Validate: validateConfirmPassword},
-			{ID: "hostname", Text: "Enter hostname:", Type: "text", Validate: validateHostname},
-			{ID: "timezone", Text: "Select timezone:", Type: "select", Options: timezone},
-			{ID: "locale", Text: "Select locale:", Type: "select", Options: locale},
-			{ID: "root_password", Text: "Use same password for root?", Type: "yesno"},
-			{ID: "disk_encryption", Text: "Use disk encryption?", Type: "yesno"},
-			{ID: "keymap", Text: "Select keymap:", Type: "select", Options: keymap},
-			{ID: "filesystem", Text: "Select filesystem:", Type: "select", Options: filesystem},
-			{ID: "desktop_env", Text: "Select desktop environment:", Type: "select", Options: desktop_env},
-			{ID: "install_drive", Text: "Select installation drive:", Type: "select", Options: driveOptions},
-			{ID: "cpu_type", Text: "CPU Type:", Type: "text", Answer: cpuType},
-			{ID: "cpu_vendor", Text: "CPU Vendor:", Type: "text", Answer: cpuVendor},
-			{ID: "cpu_microcode", Text: "CPU Microcode:", Type: "text", Answer: microcode},
-			{ID: "num_cpus", Text: "Number of CPUs:", Type: "text", Answer: strconv.Itoa(numCPUs)},
-			{ID: "os_info", Text: "OS Information:", Type: "text", Answer: osInfo},
-			{ID: "ram_info", Text: "Total RAM (GB):", Type: "text", Answer: fmt.Sprintf("%d", totalRAM)},
-		},
-		answers:      make(map[string]string),
-		textInput:    ti,
-		width:        120, // Set an initial width
-		height:       30,  // Set an initial height
-		listItems:    []string{"Option 1", "Option 2", "Option 3"},
-		selectedItem: 0,
-	}
-	m.prepareNextQuestion()
-	return m
 }
 
 func (m model) Init() tea.Cmd {
@@ -276,6 +210,33 @@ func (m *model) updateSelectQuestion(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Extract only the device name (e.g., /dev/sda) from the full answer
 			deviceName := strings.Fields(fullAnswer)[0]
 			m.questions[m.currentIndex].Answer = deviceName
+			m.answers[m.questions[m.currentIndex].ID] = deviceName
+
+			// If the current question is INSTALL_DEVICE, update related fields
+			if m.questions[m.currentIndex].ID == "INSTALL_DEVICE" {
+				suffix := getPartitionSuffix(deviceName)
+				m.answers["DEVICE"] = deviceName
+				m.answers["PARTITION_BIOSBOOT"] = deviceName
+				m.answers["PARTITION_EFI"] = fmt.Sprintf("%s%s2", deviceName, suffix)
+				m.answers["PARTITION_ROOT"] = fmt.Sprintf("%s%s3", deviceName, suffix)
+				m.answers["PARTITION_HOME"] = fmt.Sprintf("%s%s4", deviceName, suffix)
+				m.answers["PARTITION_SWAP"] = fmt.Sprintf("%s%s5", deviceName, suffix)
+
+				// Set mount options based on device type
+				if strings.Contains(deviceName, "nvme") || strings.Contains(deviceName, "ssd") {
+					m.answers["MOUNT_OPTIONS"] = "noatime,compress=zstd,ssd,commit=120"
+				} else {
+					m.answers["MOUNT_OPTIONS"] = "noatime,compress=zstd,nossd,commit=120"
+				}
+
+				// Update the answers in the questions array
+				for i, q := range m.questions {
+					if answer, ok := m.answers[q.ID]; ok {
+						m.questions[i].Answer = answer
+					}
+				}
+			}
+
 			return m, m.nextQuestion()
 		}
 	}
@@ -289,25 +250,25 @@ func (m *model) updateTextQuestion(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			currentAnswer := m.getCurrentAnswer()
 			if m.questions[m.currentIndex].Validate != nil {
-				if err := m.questions[m.currentIndex].Validate(currentAnswer, m.getAnswersMap()); err != nil {
+				if err := m.questions[m.currentIndex].Validate(currentAnswer, m.answers); err != nil {
 					m.errorMsg = err.Error()
-					if m.questions[m.currentIndex].ID == "confirm_password" {
+					if m.questions[m.currentIndex].ID == "CONFIRM_PASSWORD" {
 						m.clearPasswordFields()
-						for i, q := range m.questions {
-							if q.ID == "password" {
-								m.currentIndex = i
-								m.prepareNextQuestion()
-								break
-							}
-						}
+						m.currentIndex = m.findQuestionIndex("PASSWORD")
+						m.prepareNextQuestion()
+						return m, nil
 					}
 					return m, nil
-				} else {
-					m.errorMsg = ""
 				}
+				m.errorMsg = ""
 			}
 			m.questions[m.currentIndex].Answer = currentAnswer
 			m.answers[m.questions[m.currentIndex].ID] = currentAnswer
+
+			if m.questions[m.currentIndex].ID == "CONFIRM_PASSWORD" {
+				delete(m.answers, "CONFIRM_PASSWORD") // Remove confirm password from final answers
+			}
+
 			return m, m.nextQuestion()
 		}
 	}
@@ -322,10 +283,12 @@ func (m model) updateYesNoQuestion(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "y", "Y":
-			m.questions[m.currentIndex].Answer = "yes"
+			m.questions[m.currentIndex].Answer = "true"
+			m.answers[m.questions[m.currentIndex].ID] = "true"
 			return m, m.nextQuestion()
 		case "n", "N":
-			m.questions[m.currentIndex].Answer = "no"
+			m.questions[m.currentIndex].Answer = "false"
+			m.answers[m.questions[m.currentIndex].ID] = "false"
 			return m, m.nextQuestion()
 		}
 	}
@@ -504,7 +467,7 @@ func validatePassword(password string, _ map[string]string) error {
 }
 
 func validateConfirmPassword(confirmPassword string, answers map[string]string) error {
-	if confirmPassword != answers["password"] {
+	if confirmPassword != answers["PASSWORD"] {
 		return fmt.Errorf("passwords do not match")
 	}
 	return nil
@@ -595,11 +558,12 @@ func (m *model) prepareNextQuestion() {
 
 func (m *model) clearPasswordFields() {
 	for i, q := range m.questions {
-		if q.ID == "password" || q.ID == "confirm_password" {
+		if q.ID == "PASSWORD" || q.ID == "CONFIRM_PASSWORD" {
 			m.questions[i].Answer = ""
 			delete(m.answers, q.ID)
 		}
 	}
+	m.textInput.SetValue("")
 }
 
 func saveAnswersToFile(answers map[string]string, filename string) error {
@@ -612,9 +576,50 @@ func saveAnswersToFile(answers map[string]string, filename string) error {
 		Install: struct {
 			AutoRun bool `toml:"auto_run"`
 		}{
-			AutoRun: false,
+			AutoRun: false, // Set this to false as requested
 		},
-		Variables: answers,
+		Variables: make(map[string]string),
+	}
+
+	// Map the answers to the required format
+	variableMapping := map[string]string{
+		"COUNTRY_ISO":         "COUNTRY_ISO",
+		"INSTALL_DEVICE":      "INSTALL_DEVICE",
+		"DEVICE":              "DEVICE",
+		"PARTITION_BIOSBOOT":  "PARTITION_BIOSBOOT",
+		"PARTITION_EFI":       "PARTITION_EFI",
+		"PARTITION_ROOT":      "PARTITION_ROOT",
+		"PARTITION_HOME":      "PARTITION_HOME",
+		"PARTITION_SWAP":      "PARTITION_SWAP",
+		"MOUNT_OPTIONS":       "MOUNT_OPTIONS",
+		"LOCALE":              "LOCALE",
+		"TIMEZONE":            "TIMEZONE",
+		"KEYMAP":              "KEYMAP",
+		"USERNAME":            "USERNAME",
+		"PASSWORD":            "PASSWORD",
+		"HOSTNAME":            "HOSTNAME",
+		"MICROCODE":           "MICROCODE",
+		"GPU":                 "GPU",
+		"GPU_DRIVER":          "GPU_DRIVER",
+		"TERMINAL":            "TERMINAL",
+		"SHELL":               "SHELL",
+		"EDITOR":              "EDITOR",
+		"DESKTOP_ENVIRONMENT": "DESKTOP_ENVIRONMENT",
+		"FORMAT_TYPE":         "FORMAT_TYPE",
+		"SUBVOLUMES":          "SUBVOLUMES",
+		"LUKS_PASSWORD":       "LUKS_PASSWORD",
+		"LUKS":                "LUKS",
+	}
+
+	for key, mappedKey := range variableMapping {
+		if value, ok := answers[key]; ok {
+			config.Variables[mappedKey] = value
+		}
+	}
+
+	// Handle boolean values
+	if luksValue, ok := answers["LUKS"]; ok {
+		config.Variables["LUKS"] = fmt.Sprintf("%v", strings.ToLower(luksValue) == "yes")
 	}
 
 	file, err := os.Create(filename)
@@ -624,6 +629,7 @@ func saveAnswersToFile(answers map[string]string, filename string) error {
 	defer file.Close()
 
 	encoder := toml.NewEncoder(file)
+	encoder.Indent = ""
 	return encoder.Encode(config)
 }
 
@@ -644,7 +650,12 @@ func loadAnswersFromFile(filename string) (map[string]string, error) {
 }
 
 func loadModelFromAnswers(answers map[string]string) model {
-	m := initialModel()
+	m := model{
+		questions:    loadQuestions(),
+		currentIndex: 0,
+		answers:      make(map[string]string),
+		textInput:    textinput.New(),
+	}
 	for i, q := range m.questions {
 		if answer, ok := answers[q.ID]; ok {
 			m.questions[i].Answer = answer
@@ -654,82 +665,176 @@ func loadModelFromAnswers(answers map[string]string) model {
 	return m
 }
 
-func main() {
-	fmt.Println("Welcome to the installation configuration!")
+func loadQuestions() []Question {
+	driveOptions := getDriveInfo()
+	timezone := []string{"UTC", "America/New_York", "America/Toronto", "America/Vancouver", "America/Chicago", "America/Denver",
+		"America/Los_Angeles", "America/Texas", "Europe/London", "Europe/Berlin", "Asia/Tokyo"}
+	locale := []string{"en_US.UTF-8", "de_DE.UTF-8", "fr_FR.UTF-8"}
+	keymap := []string{"us", "uk", "de"}
+	filesystem := []string{"btrfs", "ext4"}
+	desktop_env := []string{"none", "gnome", "kde", "cosmic", "dwm"}
 
-	var initialModelInstance model
-
-	// Check if a saved file exists
-	if _, err := os.Stat("arch_config.toml"); err == nil {
-		// File exists, load the answers
-		loadedAnswers, err := loadAnswersFromFile("arch_config.toml")
-		if err != nil {
-			fmt.Printf("Error loading saved answers: %v\n", err)
-			initialModelInstance = initialModel()
-		} else {
-			initialModelInstance = loadModelFromAnswers(loadedAnswers)
-		}
-	} else {
-		// File doesn't exist, start with a new model
-		initialModelInstance = initialModel()
+	return []Question{
+		{ID: "COUNTRY_ISO", Text: "Enter country ISO code:", Type: "text", Answer: "CA"},
+		{ID: "INSTALL_DEVICE", Text: "Select installation device:", Type: "select", Options: driveOptions},
+		{ID: "DEVICE", Text: "Confirm device path:", Type: "text"},
+		{ID: "PARTITION_BIOSBOOT", Text: "Confirm BIOS boot partition:", Type: "text"},
+		{ID: "PARTITION_EFI", Text: "Confirm EFI partition:", Type: "text"},
+		{ID: "PARTITION_ROOT", Text: "Confirm root partition:", Type: "text"},
+		{ID: "PARTITION_HOME", Text: "Confirm home partition:", Type: "text"},
+		{ID: "PARTITION_SWAP", Text: "Confirm swap partition:", Type: "text"},
+		{ID: "MOUNT_OPTIONS", Text: "Enter mount options:", Type: "text", Answer: "noatime,compress=zstd,ssd,commit=120"},
+		{ID: "LOCALE", Text: "Select locale:", Type: "select", Options: locale},
+		{ID: "TIMEZONE", Text: "Select timezone:", Type: "select", Options: timezone},
+		{ID: "KEYMAP", Text: "Select keymap:", Type: "select", Options: keymap},
+		{ID: "USERNAME", Text: "Enter username:", Type: "text", Validate: validateUsername},
+		{ID: "PASSWORD", Text: "Enter password:", Type: "password", Validate: validatePassword},
+		{ID: "CONFIRM_PASSWORD", Text: "Confirm password:", Type: "password", Validate: validateConfirmPassword},
+		{ID: "HOSTNAME", Text: "Enter hostname:", Type: "text", Validate: validateHostname},
+		{ID: "MICROCODE", Text: "Select microcode:", Type: "select", Options: []string{"amd", "intel"}},
+		{ID: "GPU", Text: "Select GPU type:", Type: "select", Options: []string{"amd", "intel", "nvidia"}},
+		{ID: "GPU_DRIVER", Text: "Select GPU driver:", Type: "select", Options: []string{"nvidia", "amdgpu", "intel"}},
+		{ID: "TERMINAL", Text: "Select terminal:", Type: "select", Options: []string{"alacritty", "kitty"}},
+		{ID: "SHELL", Text: "Select shell:", Type: "select", Options: []string{"bash", "zsh"}},
+		{ID: "EDITOR", Text: "Select editor:", Type: "select", Options: []string{"nvim", "vim", "nano"}},
+		{ID: "DESKTOP_ENVIRONMENT", Text: "Select desktop environment:", Type: "select", Options: desktop_env},
+		{ID: "FORMAT_TYPE", Text: "Select filesystem format:", Type: "select", Options: filesystem},
+		{ID: "SUBVOLUMES", Text: "Enter subvolumes (comma-separated):", Type: "text", Answer: "@,@home,@var,@.snapshots"},
+		{ID: "LUKS_PASSWORD", Text: "Enter LUKS password (leave empty if not using):", Type: "password"},
+		{ID: "LUKS", Text: "Use disk encryption?", Type: "yesno"},
 	}
+}
 
-	p := tea.NewProgram(initialModelInstance, tea.WithAltScreen())
-	finalModel, err := p.Run()
+func main() {
+	questions := loadQuestions()
+	initialModel := model{
+		questions:    questions,
+		currentIndex: 0,
+		answers:      make(map[string]string),
+		textInput:    textinput.New(),
+	}
+	initialModel.textInput.Focus()
+
+	p := tea.NewProgram(initialModel)
+	m, err := p.Run()
 	if err != nil {
-		fmt.Printf("Error: %v", err)
+		fmt.Printf("Error running program: %v", err)
 		os.Exit(1)
 	}
 
-	if m, ok := finalModel.(model); ok {
-		err := saveAnswersToFile(m.answers, "arch_config.toml")
-		if err != nil {
-			fmt.Printf("Error saving answers: %v\n", err)
-		} else {
-			fmt.Println("Configuration saved successfully.")
-		}
+	finalModel := m.(model)
+	printSummary(finalModel)
 
-		// Print the summary
-		printSummary(m)
-	}
+	fmt.Println("Configuration complete. Press Enter to save and exit.")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 
-	fmt.Print("Do you want to run the install script? (y/n): ")
-	var response string
-	fmt.Scanln(&response)
-
-	if strings.ToLower(response) == "y" {
-		runInstallScript(initialModelInstance.answers)
+	runInstall := confirmAction("Do you want to run the install script?")
+	if runInstall {
+		dryRun := confirmAction("Do you want to run the install script in dry run mode?")
+		verbose := confirmAction("Do you want to run the install script in verbose mode?")
+		runInstallScript(finalModel.answers, dryRun, verbose)
 	} else {
-		saveConfigWithoutInstall(initialModelInstance.answers)
+		fmt.Println("Installation cancelled.")
+		saveConfigWithoutInstall(finalModel.answers)
 	}
-
-	fmt.Println("Configuration complete. Goodbye!")
 }
 
-func runInstallScript(answers map[string]string) {
-	// Create a temporary directory
-	tempDir, err := os.MkdirTemp("", "arch_install")
+func getInstallOptions() (bool, bool, bool) {
+	runInstall := confirmAction("Do you want to run the install script?")
+	if !runInstall {
+		return false, false, false
+	}
+	dryRun := confirmAction("Do you want to run the install script in dry run mode?")
+	verbose := confirmAction("Do you want to run the install script in verbose mode?")
+	return true, dryRun, verbose
+}
+
+func runInstallScript(answers map[string]string, dryRun bool, verbose bool) {
+	cwd, err := os.Getwd()
 	if err != nil {
-		fmt.Printf("Error creating temp directory: %v\n", err)
+		fmt.Printf("Error getting current working directory: %v\n", err)
 		return
 	}
-	defer os.RemoveAll(tempDir)
 
-	// Extract all embedded files to the temp directory
-	err = extractEmbeddedFiles(installFiles, "install", tempDir)
+	archDir := filepath.Join(cwd, "install")
+	scriptsDir := filepath.Join(archDir, "scripts")
+	configFile := filepath.Join(archDir, "arch_config.toml")
+
+	err = extractEmbeddedFiles(installFiles, "install", archDir)
 	if err != nil {
 		fmt.Printf("Error extracting files: %v\n", err)
 		return
 	}
 
-	// Run the install.sh script
-	cmd := exec.Command("/bin/bash", filepath.Join(tempDir, "install.sh"))
+	err = saveAnswersToFile(answers, configFile)
+	if err != nil {
+		fmt.Printf("Error saving config file: %v\n", err)
+		return
+	}
+
+	installScriptPath := filepath.Join(archDir, "install.sh")
+	args := []string{installScriptPath}
+	if dryRun {
+		args = append(args, "--dry-run")
+	}
+	if verbose {
+		args = append(args, "--verbose")
+	}
+
+	cmd := exec.Command("/bin/bash", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), formatEnvVars(answers)...)
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("ARCH_DIR=%s", archDir),
+		fmt.Sprintf("SCRIPTS_DIR=%s", scriptsDir),
+		fmt.Sprintf("CONFIG_FILE=%s", configFile),
+	)
+
+	fmt.Println("Running install script with the following options:")
+	fmt.Printf("Dry Run: %v\n", dryRun)
+	fmt.Printf("Verbose: %v\n", verbose)
+	fmt.Println("Press Enter to continue or Ctrl+C to cancel...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
+
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("Error running install script: %v\n", err)
 	}
+}
+
+func confirmAction(prompt string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("%s (y/n): ", prompt)
+		response, _ := reader.ReadString('\n')
+		response = strings.ToLower(strings.TrimSpace(response))
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+		fmt.Println("Please answer with 'y' or 'n'")
+	}
+}
+
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	return destFile.Sync()
 }
 
 func extractEmbeddedFiles(fsys embed.FS, root, destPath string) error {
@@ -806,4 +911,20 @@ func printSummary(m model) {
 	printSetting("CPU Cores", "num_cpus")
 	printSetting("RAM", "ram_info")
 	printSetting("Install Drive", "install_drive")
+}
+
+func getPartitionSuffix(device string) string {
+	if strings.Contains(device, "nvme") || strings.Contains(device, "ssd") {
+		return "p"
+	}
+	return ""
+}
+
+func (m *model) findQuestionIndex(id string) int {
+	for i, q := range m.questions {
+		if q.ID == id {
+			return i
+		}
+	}
+	return -1
 }
