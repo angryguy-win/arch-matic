@@ -1,4 +1,4 @@
- [PROC]  Starting process:  Main Installation Process (ID: 1727689414)
+ [PROC]  Starting process:  Main Installation Process (ID: 1727846707)
  
 -------------------------------------------------------------------------
 
@@ -19,7 +19,7 @@
   [OK]  Configuration loaded successfully
   [OK]  All required scripts are present.
  [INFO]  Executing: 1-pre/pre-setup.sh
- [PROC]  Starting process:  Pre-setup (ID: 1727689414)
+ [PROC]  Starting process:  Pre-setup (ID: 1727846707)
  
 -------------------------------------------------------------------------
 
@@ -49,25 +49,15 @@
  [ACTION]  [DRY RUN] Would execute: cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
   [OK]  Mirror setup completed Mirror setup completed
  [INFO]  Preparing drive
- [ACTION]  Setting:  DEVICE=/dev//dev/nvme0n1 in /home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg
- [ACTION]  Drive set to:  /dev//dev/nvme0n1
- [ACTION]  Partitions string set to:  /dev//dev/nvme0n12, /dev//dev/nvme0n13
- [ACTION]  Setting:  DEVICE=/dev//dev/nvme0n1 in /home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg
- [ACTION]  Setting:  PARTITION_EFI=/dev//dev/nvme0n12 in /home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg
- [ACTION]  Setting:  PARTITION_ROOT=/dev//dev/nvme0n13 in /home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg
- [ACTION]  Setting:  PARTITION_HOME=/dev//dev/nvme0n14 in /home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg
- [ACTION]  Setting:  PARTITION_SWAP=/dev//dev/nvme0n15 in /home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg
- [ACTION]  Setting:  MOUNT_OPTIONS=noatime,compress=zstd,commit=120 in /home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg
-  [OK]  Configuration loaded successfully
   [OK]  Pre-setup process completed successfully
- [PROC]  Process completed successfully:  Pre-setup (ID: 1727689414)
- Process start 2024-09-30 09:43:34, end 2024-09-30 09:43:34, time 00:00:00
+ [PROC]  Process completed successfully:  Pre-setup (ID: 1727846707)
+ Process start 2024-10-02 05:25:07, end 2024-10-02 05:25:08, time 00:00:01
  [INFO]  All processes allmost completed.....
  [INFO]  Exit handler called with exit code:  0
  [INFO]  Script execution completed successfully
  [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/1-pre/pre-setup.sh
  [INFO]  Executing: 1-pre/run-checks.sh
- [PROC]  Starting process:  Run Checks (ID: 1727689416)
+ [PROC]  Starting process:  Run Checks (ID: 1727846710)
  [INFO]  Starting run checks process
  [ACTION]  Setting:  BIOS_TYPE=uefi in /home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg
  [ACTION]  Setting:  CPU_VENDOR=amd in /home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg
@@ -77,14 +67,14 @@
  [INFO]  Checking internet connection...
   [OK]  Internet connection is available
   [OK]  Run checks process completed successfully
- [PROC]  Process completed successfully:  Run Checks (ID: 1727689416)
- Process start 2024-09-30 09:43:36, end 2024-09-30 09:43:37, time 00:00:01
+ [PROC]  Process completed successfully:  Run Checks (ID: 1727846710)
+ Process start 2024-10-02 05:25:10, end 2024-10-02 05:25:10, time 00:00:00
  [INFO]  All processes allmost completed.....
  [INFO]  Exit handler called with exit code:  0
  [INFO]  Script execution completed successfully
  [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/1-pre/run-checks.sh
  [INFO]  Executing: 2-drive/partition-btrfs.sh
- [PROC]  Starting process:  Partition Btrfs (ID: 1727689419)
+ [PROC]  Starting process:  Partition Btrfs (ID: 1727846712)
  
 -------------------------------------------------------------------------
 
@@ -110,14 +100,14 @@
  [ACTION]  [DRY RUN] Would execute: sgdisk -n3:0:0 -t3:8300 -c3:'ROOT' /dev/nvme0n1
   [OK]  Partitioning completed Partitioning completed
   [OK]  Partition btrfs process completed successfully
- [PROC]  Process completed successfully:  Partition Btrfs (ID: 1727689419)
- Process start 2024-09-30 09:43:39, end 2024-09-30 09:43:39, time 00:00:00
+ [PROC]  Process completed successfully:  Partition Btrfs (ID: 1727846712)
+ Process start 2024-10-02 05:25:12, end 2024-10-02 05:25:12, time 00:00:00
  [INFO]  All processes allmost completed.....
  [INFO]  Exit handler called with exit code:  0
  [INFO]  Script execution completed successfully
  [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/2-drive/partition-btrfs.sh
  [INFO]  Executing: 2-drive/format-btrfs.sh
- [PROC]  Starting process:  Formatting partitions btrfs (ID: 1727689421)
+ [PROC]  Starting process:  Formatting partitions btrfs (ID: 1727846714)
  
 -------------------------------------------------------------------------
 
@@ -133,356 +123,4 @@
 
  [INFO]  Starting formatting partitions btrfs process
  [INFO]  DRY_RUN in format-btrfs.sh is set to: true
- [INFO]  Starting: Formatting partitions btrfs
- [ACTION]  [DRY RUN] Would execute: mkfs.vfat -F32 -n EFIBOOT /dev/nvme0n1p2
- [ACTION]  [DRY RUN] Would execute: mkfs.btrfs -f -L ROOT /dev/nvme0n1p3
- [ACTION]  [DRY RUN] Would execute: mount -t btrfs /dev/nvme0n1p3 /mnt
-  [OK]  Formatting partitions btrfs completed Formatting partitions btrfs completed
- [INFO]  Starting: Creating subvolumes
- [ACTION]  [DRY RUN] Would execute: btrfs subvolume create /mnt/@
- [ACTION]  [DRY RUN] Would execute: btrfs subvolume create /mnt/@home
- [ACTION]  [DRY RUN] Would execute: btrfs subvolume create /mnt/@var
- [ACTION]  [DRY RUN] Would execute: btrfs subvolume create /mnt/@tmp
- [ACTION]  [DRY RUN] Would execute: btrfs subvolume create /mnt/@.snapshots
- [ACTION]  [DRY RUN] Would execute: umount /mnt
-  [OK]  Creating subvolumes completed Creating subvolumes completed
- [INFO]  Starting: Mounting subvolumes btrfs
- [ACTION]  [DRY RUN] Would execute: mount -o noatime,compress=zstd,ssd,commit=120,subvol=@ /dev/nvme0n1p3 /mnt
- [ACTION]  [DRY RUN] Would execute: mkdir -p /mnt/{home,var,tmp,.snapshots,boot/efi}
- [ACTION]  [DRY RUN] Would execute: mount -o noatime,compress=zstd,ssd,commit=120,subvol=@home /dev/nvme0n1p3 /mnt/home
- [ACTION]  [DRY RUN] Would execute: mount -o noatime,compress=zstd,ssd,commit=120,subvol=@tmp /dev/nvme0n1p3 /mnt/tmp
- [ACTION]  [DRY RUN] Would execute: mount -o noatime,compress=zstd,ssd,commit=120,subvol=@var /dev/nvme0n1p3 /mnt/var
- [ACTION]  [DRY RUN] Would execute: mount -o noatime,compress=zstd,ssd,commit=120,subvol=@.snapshots /dev/nvme0n1p3 /mnt/.snapshots
- [ACTION]  [DRY RUN] Would execute: mount -t vfat -L EFIBOOT /mnt/boot/efi
-  [OK]  Mounting subvolumes btrfs completed Mounting subvolumes btrfs completed
-  [OK]  Formatting partitions btrfs process completed successfully
- [PROC]  Process completed successfully:  Formatting partitions btrfs (ID: 1727689421)
- Process start 2024-09-30 09:43:41, end 2024-09-30 09:43:41, time 00:00:00
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
- [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/2-drive/format-btrfs.sh
- [INFO]  Executing: 3-base/bootstrap-pkgs.sh
- [PROC]  Starting process:  Bootstrap Packages (ID: 1727689423)
  
--------------------------------------------------------------------------
-
-                 █████╗ ██████╗  ██████ ██╗  ██╗
-                ██╔══██╗██╔══██╗██╔════╝██║  ██║
-                ███████║██████╔╝██║     ███████║ 
-                ██╔══██║██╔══██╗██║     ██╔══██║
-                ██║  ██║██║  ██║╚██████╗██║  ██║
-                ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-------------------------------------------------------------------------
-                 Bootstrap Packages
-------------------------------------------------------------------------
-
- [INFO]  Starting bootstrap packages process
- [INFO]  DRY_RUN in bootstrap-pkgs.sh is set to: true
- [INFO]  Starting: Installing base system
- [ACTION]  [DRY RUN] Would execute: pacstrap /mnt base base-devel linux linux-firmware efibootmgr grub amd-ucode --noconfirm --needed
-  [OK]  Base system installation completed Installing base system completed
-  [OK]  Bootstrap packages process completed successfully
- [PROC]  Process completed successfully:  Bootstrap Packages (ID: 1727689423)
- Process start 2024-09-30 09:43:43, end 2024-09-30 09:43:43, time 00:00:00
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
- [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/3-base/bootstrap-pkgs.sh
- [INFO]  Executing: 3-base/generate-fstab.sh
- [PROC]  Starting process:  Generate Fstab (ID: 1727689425)
- 
--------------------------------------------------------------------------
-
-                 █████╗ ██████╗  ██████ ██╗  ██╗
-                ██╔══██╗██╔══██╗██╔════╝██║  ██║
-                ███████║██████╔╝██║     ███████║ 
-                ██╔══██║██╔══██╗██║     ██╔══██║
-                ██║  ██║██║  ██║╚██████╗██║  ██║
-                ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-------------------------------------------------------------------------
-                 Generate Fstab
-------------------------------------------------------------------------
-
- [INFO]  Starting generate fstab process
- [INFO]  DRY_RUN in generate-fstab.sh is set to: true
- [INFO]  Generating fstab
- [INFO]  Starting: Generating fstab
- [ACTION]  [DRY RUN] Would execute: genfstab -U /mnt >> /mnt/etc/fstab
-  [OK]  fstab generation completed Generating fstab completed
- [INFO]  Starting: Installing GRUB
- [ACTION]  [DRY RUN] Would execute: grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
- [ACTION]  [DRY RUN] Would execute: grub-mkconfig -o /boot/grub/grub.cfg
-  [OK]  GRUB installation completed Installing GRUB completed
-  [OK]  Generate fstab process completed successfully
- [PROC]  Process completed successfully:  Generate Fstab (ID: 1727689425)
- Process start 2024-09-30 09:43:45, end 2024-09-30 09:43:45, time 00:00:00
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
- [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/3-base/generate-fstab.sh
- [INFO]  Executing: 4-post/system-config.sh
- [PROC]  Starting process:  System Config (ID: 1727689427)
- 
--------------------------------------------------------------------------
-
-                 █████╗ ██████╗  ██████ ██╗  ██╗
-                ██╔══██╗██╔══██╗██╔════╝██║  ██║
-                ███████║██████╔╝██║     ███████║ 
-                ██╔══██║██╔══██╗██║     ██╔══██║
-                ██║  ██║██║  ██║╚██████╗██║  ██║
-                ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-------------------------------------------------------------------------
-                 System Config
-------------------------------------------------------------------------
-
- [INFO]  Starting system config process
- [INFO]  DRY_RUN in system-config.sh is set to: true
- [WARNING]  Unknown GPU. Installing generic drivers
- [INFO]  Starting: GPU Setup
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed xf86-video-vesa mesa
-  [OK]  GPU setup completed GPU Setup completed
- [INFO]  Starting: System config
- [ACTION]  [DRY RUN] Would execute: echo 'angryguy' > /etc/hostname
- [ACTION]  [DRY RUN] Would execute: echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
- [ACTION]  [DRY RUN] Would execute: locale-gen
- [ACTION]  [DRY RUN] Would execute: echo 'LANG=en_US.UTF-8' > /etc/locale.conf
- [ACTION]  [DRY RUN] Would execute: ln -sf /usr/share/zoneinfo/America/Toronto /etc/localtime
- [ACTION]  [DRY RUN] Would execute: echo 'KEYMAP=us' > /etc/vconsole.conf
- [ACTION]  [DRY RUN] Would execute: useradd -m -G wheel -s /bin/bash ssnow
- [ACTION]  [DRY RUN] Would execute: echo 'root:password' | chpasswd
- [ACTION]  [DRY RUN] Would execute: echo 'ssnow:password' | chpasswd
- [ACTION]  [DRY RUN] Would execute: sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
-  [OK]  System config completed System config completed
-  [OK]  System config process completed successfully
- [PROC]  Process completed successfully:  System Config (ID: 1727689427)
- Process start 2024-09-30 09:43:47, end 2024-09-30 09:43:47, time 00:00:00
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
- [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/4-post/system-config.sh
- [INFO]  Executing: 4-post/system-pkgs.sh
- [PROC]  Starting process:  System Packages (ID: 1727689429)
- 
--------------------------------------------------------------------------
-
-                 █████╗ ██████╗  ██████ ██╗  ██╗
-                ██╔══██╗██╔══██╗██╔════╝██║  ██║
-                ███████║██████╔╝██║     ███████║ 
-                ██╔══██║██╔══██╗██║     ██╔══██║
-                ██║  ██║██║  ██║╚██████╗██║  ██║
-                ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-------------------------------------------------------------------------
-                 System Packages
-------------------------------------------------------------------------
-
- [INFO]  Starting system packages process
- [INFO]  DRY_RUN in system-pkgs.sh is set to: true
- [INFO]  Starting package installation
- [INFO]  Installing group: base
- [INFO]  Installing base packages: eza fzf zoxide bat exa
- [INFO]  Starting: Install base packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed eza fzf zoxide bat exa
-  [OK]  base packages installed successfully Install base packages completed
- [INFO]  Installing group: bluetooth
- [INFO]  Installing bluetooth packages: bluez bluez-utils
- [INFO]  Starting: Install bluetooth packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed bluez bluez-utils
-  [OK]  bluetooth packages installed successfully Install bluetooth packages completed
- [INFO]  Installing group: audio
- [INFO]  Installing audio packages: pipewire wireplumber pipewire-pulse pipewire-alsa pipewire-jack
- [INFO]  Starting: Install audio packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed pipewire wireplumber pipewire-pulse pipewire-alsa pipewire-jack
-  [OK]  audio packages installed successfully Install audio packages completed
- [INFO]  Installing group: utilities
- [INFO]  Installing utilities packages: fastfetch ntp cronie alacritty kitty thunar
- [INFO]  Starting: Install utilities packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed fastfetch ntp cronie alacritty kitty thunar
-  [OK]  utilities packages installed successfully Install utilities packages completed
- [INFO]  Installing group: browser
- [INFO]  Installing browser packages: firefox
- [INFO]  Starting: Install browser packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed firefox
-  [OK]  browser packages installed successfully Install browser packages completed
- [INFO]  Installing group: desktop
- [INFO]  Installing desktop packages: gnome gnome-tweaks gdm
- [INFO]  Starting: Install desktop packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed gnome gnome-tweaks gdm
-  [OK]  desktop packages installed successfully Install desktop packages completed
- [INFO]  Installing group: development
- [INFO]  Installing development packages: git vim neovim
- [INFO]  Starting: Install development packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed git vim neovim
-  [OK]  development packages installed successfully Install development packages completed
- [INFO]  Installing group: office
- [INFO]  Installing office packages: libreoffice-fresh pinta
- [INFO]  Starting: Install office packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed libreoffice-fresh pinta
-  [OK]  office packages installed successfully Install office packages completed
- [INFO]  Installing group: multimedia
- [INFO]  Installing multimedia packages: vlc
- [INFO]  Starting: Install multimedia packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed vlc
-  [OK]  multimedia packages installed successfully Install multimedia packages completed
- [INFO]  Installing group: communication
- [INFO]  Installing communication packages: discord thunderbird
- [INFO]  Starting: Install communication packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed discord thunderbird
-  [OK]  communication packages installed successfully Install communication packages completed
- [INFO]  Installing group: security
- [INFO]  Installing security packages: bitwarden
- [INFO]  Starting: Install security packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed bitwarden
-  [OK]  security packages installed successfully Install security packages completed
- [INFO]  Installing group: networking
- [INFO]  Installing networking packages: networkmanager network-manager-applet dhclient
- [INFO]  Starting: Install networking packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed networkmanager network-manager-applet dhclient
-  [OK]  networking packages installed successfully Install networking packages completed
- [INFO]  Installing group: printer
- [INFO]  Installing printer packages: cups
- [INFO]  Starting: Install printer packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed cups
-  [OK]  printer packages installed successfully Install printer packages completed
- [INFO]  Installing group: fonts
- [INFO]  Installing fonts packages: terminus-font ttf-font-awesome ttf-nerd-fonts-symbols ttf-jetbrains-mono-nerd ttf-meslo-nerd ttf-firacode-nerd ttf-nerd-fonts-symbols-common
- [INFO]  Starting: Install fonts packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed terminus-font ttf-font-awesome ttf-nerd-fonts-symbols ttf-jetbrains-mono-nerd ttf-meslo-nerd ttf-firacode-nerd ttf-nerd-fonts-symbols-common
-  [OK]  fonts packages installed successfully Install fonts packages completed
- [INFO]  Installing group: filesystem
- [INFO]  Installing filesystem packages: btrfs-progs dosfstools ntfs-3g
- [INFO]  Starting: Install filesystem packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed btrfs-progs dosfstools ntfs-3g
-  [OK]  filesystem packages installed successfully Install filesystem packages completed
- [INFO]  Installing group: xdg
- [INFO]  Installing xdg packages: xdg-user-dirs
- [INFO]  Starting: Install xdg packages
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed xdg-user-dirs
-  [OK]  xdg packages installed successfully Install xdg packages completed
-  [OK]  Package installation completed
-  [OK]  System packages process completed successfully
- [PROC]  Process completed successfully:  System Packages (ID: 1727689429)
- Process start 2024-09-30 09:43:49, end 2024-09-30 09:43:50, time 00:00:01
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
- [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/4-post/system-pkgs.sh
- [INFO]  Executing: 4-post/terminal.sh
- [PROC]  Starting process:  Terminal (ID: 1727689432)
- 
--------------------------------------------------------------------------
-
-                 █████╗ ██████╗  ██████ ██╗  ██╗
-                ██╔══██╗██╔══██╗██╔════╝██║  ██║
-                ███████║██████╔╝██║     ███████║ 
-                ██╔══██║██╔══██╗██║     ██╔══██║
-                ██║  ██║██║  ██║╚██████╗██║  ██║
-                ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-------------------------------------------------------------------------
-                 Terminal
-------------------------------------------------------------------------
-
- [INFO]  Starting Terminal process
- [INFO]  DRY_RUN in terminal.sh is set to: true
- [INFO]  Installing Terminal
- [INFO]  Starting: Installing Terminal
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed alacritty kitty bash starship
- [ACTION]  [DRY RUN] Would execute: cp -r /home/ssnow/Documents/GitHub/arch-matic/install/scripts/4-post/config/alacritty ~/.config/alacritty
- [ACTION]  [DRY RUN] Would execute: cp -r /home/ssnow/Documents/GitHub/arch-matic/install/scripts/4-post/config/starship.toml ~/.config/starship.toml
- [ACTION]  [DRY RUN] Would execute: cp -r /home/ssnow/Documents/GitHub/arch-matic/install/scripts/4-post/config/bashrc ~/.bashrc
-  [OK]  Terminal installation completed Installing Terminal completed
-  [OK]  Terminal installation completed successfully
- [PROC]  Process completed successfully:  Terminal (ID: 1727689432)
- Process start 2024-09-30 09:43:52, end 2024-09-30 09:43:52, time 00:00:00
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
- [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/4-post/terminal.sh
- [INFO]  Executing: 5-desktop/cosmic.sh
- [PROC]  Starting process:  Cosmic OS (ID: 1727689434)
- 
--------------------------------------------------------------------------
-
-                 █████╗ ██████╗  ██████ ██╗  ██╗
-                ██╔══██╗██╔══██╗██╔════╝██║  ██║
-                ███████║██████╔╝██║     ███████║ 
-                ██╔══██║██╔══██╗██║     ██╔══██║
-                ██║  ██║██║  ██║╚██████╗██║  ██║
-                ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-------------------------------------------------------------------------
-                 Cosmic OS
-------------------------------------------------------------------------
-
- [INFO]  Starting cosmic OS process
- [INFO]  DRY_RUN in cosmic.sh is set to: true
- [INFO]  Installing Cosmic OS
- [INFO]  Starting: Installing Cosmic OS
- [ACTION]  [DRY RUN] Would execute: pacman -S --noconfirm --needed cosmic cosmic-greeter
-  [OK]  Cosmic OS installation completed Installing Cosmic OS completed
-  [OK]  Cosmic OS installation completed successfully
- [PROC]  Process completed successfully:  Cosmic OS (ID: 1727689434)
- Process start 2024-09-30 09:43:54, end 2024-09-30 09:43:54, time 00:00:00
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
- [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/5-desktop/cosmic.sh
- [INFO]  Executing: 6-final/last-cleanup.sh
- [PROC]  Starting process:  Last cleanup (ID: 1727689436)
- 
--------------------------------------------------------------------------
-
-                 █████╗ ██████╗  ██████ ██╗  ██╗
-                ██╔══██╗██╔══██╗██╔════╝██║  ██║
-                ███████║██████╔╝██║     ███████║ 
-                ██╔══██║██╔══██╗██║     ██╔══██║
-                ██║  ██║██║  ██║╚██████╗██║  ██║
-                ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-------------------------------------------------------------------------
-                 Last cleanup
-------------------------------------------------------------------------
-
- [INFO]  Starting last cleanup process
- [INFO]  DRY_RUN in last-cleanup.sh is set to: true
- [INFO]  Enable and start services
- [INFO]  Starting: Enable and start services
- [ACTION]  [DRY RUN] Would execute: systemctl enable NetworkManager
- [ACTION]  [DRY RUN] Would execute: systemctl enable sshd
- [ACTION]  [DRY RUN] Would execute: systemctl enable cronie
- [ACTION]  [DRY RUN] Would execute: systemctl enable bluetooth
- [ACTION]  [DRY RUN] Would execute: systemctl enable gdm
-  [OK]  Enable and start services completed Enable and start services completed
- [INFO]  Last cleanup
- [INFO]  Starting: Last cleanup
- [ACTION]  [DRY RUN] Would execute: 
-  [OK]  Last cleanup completed Last cleanup completed
-  [OK]  Last cleanup completed successfully
-  [OK]  Arch Linux installation completed. You can now reboot into your new system.
- [PROC]  Process completed successfully:  Last cleanup (ID: 1727689436)
- Process start 2024-09-30 09:43:56, end 2024-09-30 09:43:56, time 00:00:00
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
- [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/6-final/last-cleanup.sh
- [INFO]  Executing: 7-post-setup/post-setup.sh
- [PROC]  Starting process:  Post Setup (ID: 1727689438)
- [INFO]  Starting post setup process
-  [OK]  Post setup process completed successfully
- [PROC]  Process completed successfully:  Post Setup (ID: 1727689438)
- Process start 2024-09-30 09:43:58, end 2024-09-30 09:43:58, time 00:00:00
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
- [ACTION]  Successfully executed: /home/ssnow/Documents/GitHub/arch-matic/install/scripts/7-post-setup/post-setup.sh
-  [OK]  Arch Linux installation completed successfully
-Installation start 2024-09-30 09:43:34, end 2024-09-30 09:44:00, time 00:00:26
- [PROC]  Process completed successfully:  Main Installation Process (ID: 1727689414)
- Process start 2024-09-30 09:43:34, end 2024-09-30 09:44:00, time 00:00:26
- [INFO]  All processes allmost completed.....
- [INFO]  Exit handler called with exit code:  0
- [INFO]  Script execution completed successfully
-/home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg: line 1: [install]=: command not found
-/home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg: line 3: =: command not found
-/home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg: line 4: [variables]=: command not found
-/home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg: line 1: [install]=: command not found
-/home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg: line 3: =: command not found
-/home/ssnow/Documents/GitHub/arch-matic/install/arch_config.cfg: line 4: [variables]=: command not found

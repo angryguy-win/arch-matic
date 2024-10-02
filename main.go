@@ -2,9 +2,11 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +14,8 @@ import (
 	"strings"
 
 	"embed"
+
+	"flag"
 
 	"github.com/BurntSushi/toml"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -63,9 +67,53 @@ type Question struct {
 	Validate func(string, map[string]string) error
 }
 
-type Contact struct {
-	Name  string
-	Email string
+func main() {
+	// Define flags
+	dryRun := flag.Bool("d", false, "Run in dry-run mode")
+	flag.BoolVar(dryRun, "dry-run", false, "Run in dry-run mode")
+	verbose := flag.Bool("v", false, "Run in verbose mode")
+	flag.BoolVar(verbose, "verbose", false, "Run in verbose mode")
+	flag.Parse()
+
+	questions := loadQuestions()
+
+	// Load default answers from arch_config.toml if it exists
+	defaultAnswers, err := loadTOMLConfig("arch_config.toml")
+	if err != nil && !os.IsNotExist(err) {
+		fmt.Printf("Error loading arch_config.toml: %v\n", err)
+	}
+
+	initialModel := model{
+		questions:    questions,
+		currentIndex: 0,
+		answers:      defaultAnswers, // Use loaded answers as defaults
+		textInput:    textinput.New(),
+	}
+	initialModel.textInput.Focus()
+
+	p := tea.NewProgram(initialModel)
+	m, err := p.Run()
+	if err != nil {
+		fmt.Printf("Error running program: %v", err)
+		os.Exit(1)
+	}
+
+	finalModel := m.(model)
+	printSummary(finalModel)
+
+	config := map[string]interface{}{
+		"install":   map[string]bool{"auto_run": finalModel.answers["run_install"] == "true"},
+		"variables": finalModel.answers,
+	}
+
+	if err := saveAndVerifyConfig(config); err != nil {
+		fmt.Printf("Error saving configuration: %v\n", err)
+		os.Exit(1)
+	}
+
+	if finalModel.answers["run_install"] == "true" {
+		runInstallScript(finalModel.answers, *dryRun, *verbose)
+	}
 }
 
 func getDriveInfo() []string {
@@ -567,6 +615,7 @@ func (m *model) clearPasswordFields() {
 }
 
 func saveAnswersToFile(answers map[string]string, filename string) error {
+	// Prepare the configuration structure
 	config := struct {
 		Install struct {
 			AutoRun bool `toml:"auto_run"`
@@ -576,61 +625,32 @@ func saveAnswersToFile(answers map[string]string, filename string) error {
 		Install: struct {
 			AutoRun bool `toml:"auto_run"`
 		}{
-			AutoRun: false, // Set this to false as requested
+			AutoRun: answers["run_install"] == "true",
 		},
-		Variables: make(map[string]string),
+		Variables: answers,
 	}
 
-	// Map the answers to the required format
-	variableMapping := map[string]string{
-		"COUNTRY_ISO":         "COUNTRY_ISO",
-		"INSTALL_DEVICE":      "INSTALL_DEVICE",
-		"DEVICE":              "DEVICE",
-		"PARTITION_BIOSBOOT":  "PARTITION_BIOSBOOT",
-		"PARTITION_EFI":       "PARTITION_EFI",
-		"PARTITION_ROOT":      "PARTITION_ROOT",
-		"PARTITION_HOME":      "PARTITION_HOME",
-		"PARTITION_SWAP":      "PARTITION_SWAP",
-		"MOUNT_OPTIONS":       "MOUNT_OPTIONS",
-		"LOCALE":              "LOCALE",
-		"TIMEZONE":            "TIMEZONE",
-		"KEYMAP":              "KEYMAP",
-		"USERNAME":            "USERNAME",
-		"PASSWORD":            "PASSWORD",
-		"HOSTNAME":            "HOSTNAME",
-		"MICROCODE":           "MICROCODE",
-		"GPU":                 "GPU",
-		"GPU_DRIVER":          "GPU_DRIVER",
-		"TERMINAL":            "TERMINAL",
-		"SHELL":               "SHELL",
-		"EDITOR":              "EDITOR",
-		"DESKTOP_ENVIRONMENT": "DESKTOP_ENVIRONMENT",
-		"FORMAT_TYPE":         "FORMAT_TYPE",
-		"SUBVOLUMES":          "SUBVOLUMES",
-		"LUKS_PASSWORD":       "LUKS_PASSWORD",
-		"LUKS":                "LUKS",
+	// Ensure the directory exists
+	dir := filepath.Dir(filename)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return fmt.Errorf("error creating directory: %v", err)
 	}
 
-	for key, mappedKey := range variableMapping {
-		if value, ok := answers[key]; ok {
-			config.Variables[mappedKey] = value
-		}
-	}
-
-	// Handle boolean values
-	if luksValue, ok := answers["LUKS"]; ok {
-		config.Variables["LUKS"] = fmt.Sprintf("%v", strings.ToLower(luksValue) == "yes")
-	}
-
+	// Save the configuration file
 	file, err := os.Create(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating config file: %v", err)
 	}
 	defer file.Close()
 
 	encoder := toml.NewEncoder(file)
-	encoder.Indent = ""
-	return encoder.Encode(config)
+	encoder.Indent = "  "
+	if err := encoder.Encode(config); err != nil {
+		return fmt.Errorf("error encoding TOML: %v", err)
+	}
+
+	fmt.Printf("Configuration saved to %s\n", filename)
+	return nil
 }
 
 func loadAnswersFromFile(filename string) (map[string]string, error) {
@@ -674,7 +694,8 @@ func loadQuestions() []Question {
 	filesystem := []string{"btrfs", "ext4"}
 	desktop_env := []string{"none", "gnome", "kde", "cosmic", "dwm"}
 
-	return []Question{
+	// Your existing questions slice
+	questions := []Question{
 		{ID: "COUNTRY_ISO", Text: "Enter country ISO code:", Type: "text", Answer: "CA"},
 		{ID: "INSTALL_DEVICE", Text: "Select installation device:", Type: "select", Options: driveOptions},
 		{ID: "DEVICE", Text: "Confirm device path:", Type: "text"},
@@ -702,41 +723,25 @@ func loadQuestions() []Question {
 		{ID: "SUBVOLUMES", Text: "Enter subvolumes (comma-separated):", Type: "text", Answer: "@,@home,@var,@.snapshots"},
 		{ID: "LUKS_PASSWORD", Text: "Enter LUKS password (leave empty if not using):", Type: "password"},
 		{ID: "LUKS", Text: "Use disk encryption?", Type: "yesno"},
-	}
-}
-
-func main() {
-	questions := loadQuestions()
-	initialModel := model{
-		questions:    questions,
-		currentIndex: 0,
-		answers:      make(map[string]string),
-		textInput:    textinput.New(),
-	}
-	initialModel.textInput.Focus()
-
-	p := tea.NewProgram(initialModel)
-	m, err := p.Run()
-	if err != nil {
-		fmt.Printf("Error running program: %v", err)
-		os.Exit(1)
+		// Add these new questions at the end
+		{
+			ID:   "run_install",
+			Text: "Do you want to run the install script?",
+			Type: "yesno",
+		},
 	}
 
-	finalModel := m.(model)
-	printSummary(finalModel)
+	// Load default answers
+	defaultAnswers, _ := loadTOMLConfig("arch_config.toml")
 
-	fmt.Println("Configuration complete. Press Enter to save and exit.")
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
-
-	runInstall := confirmAction("Do you want to run the install script?")
-	if runInstall {
-		dryRun := confirmAction("Do you want to run the install script in dry run mode?")
-		verbose := confirmAction("Do you want to run the install script in verbose mode?")
-		runInstallScript(finalModel.answers, dryRun, verbose)
-	} else {
-		fmt.Println("Installation cancelled.")
-		saveConfigWithoutInstall(finalModel.answers)
+	// Set default answers for questions if they exist in the config
+	for i, q := range questions {
+		if defaultValue, exists := defaultAnswers[q.ID]; exists {
+			questions[i].Answer = defaultValue
+		}
 	}
+
+	return questions
 }
 
 func getInstallOptions() (bool, bool, bool) {
@@ -760,18 +765,20 @@ func runInstallScript(answers map[string]string, dryRun bool, verbose bool) {
 	scriptsDir := filepath.Join(archDir, "scripts")
 	configFile := filepath.Join(archDir, "arch_config.toml")
 
+	// **First**, extract embedded files
 	err = extractEmbeddedFiles(installFiles, "install", archDir)
 	if err != nil {
 		fmt.Printf("Error extracting files: %v\n", err)
 		return
 	}
 
-	err = saveAnswersToFile(answers, configFile)
-	if err != nil {
+	// **Then**, save the updated configuration
+	if err := saveAnswersToFile(answers, configFile); err != nil {
 		fmt.Printf("Error saving config file: %v\n", err)
 		return
 	}
 
+	// Proceed with running the install script
 	installScriptPath := filepath.Join(archDir, "install.sh")
 	args := []string{installScriptPath}
 	if dryRun {
@@ -819,22 +826,27 @@ func confirmAction(prompt string) bool {
 func copyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("error opening source file: %v", err)
 	}
 	defer sourceFile.Close()
 
 	destFile, err := os.Create(dst)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating destination file: %v", err)
 	}
 	defer destFile.Close()
 
 	_, err = io.Copy(destFile, sourceFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("error copying file contents: %v", err)
 	}
 
-	return destFile.Sync()
+	err = destFile.Sync()
+	if err != nil {
+		return fmt.Errorf("error syncing destination file: %v", err)
+	}
+
+	return nil
 }
 
 func extractEmbeddedFiles(fsys embed.FS, root, destPath string) error {
@@ -865,27 +877,104 @@ func formatEnvVars(answers map[string]string) []string {
 	return env
 }
 
+func saveConfigAndRun(answers map[string]string, dryRun bool, verbose bool) {
+	// Set auto_run to true
+	config := map[string]interface{}{
+		"install":   map[string]bool{"auto_run": true},
+		"variables": answers,
+	}
+
+	if err := saveAndVerifyConfig(config); err != nil {
+		fmt.Printf("Error saving configuration: %v\n", err)
+		return
+	}
+
+	// Run the install script
+	runInstallScript(answers, dryRun, verbose)
+}
+
 func saveConfigWithoutInstall(answers map[string]string) {
 	config := map[string]interface{}{
 		"install":   map[string]bool{"auto_run": false},
 		"variables": answers,
 	}
-	saveConfig(config, "Saving configuration without running install script...")
+
+	if err := saveAndVerifyConfig(config); err != nil {
+		fmt.Printf("Error saving configuration: %v\n", err)
+	}
 }
 
-func saveConfig(config map[string]interface{}, message string) {
+func saveAndVerifyConfig(config map[string]interface{}) error {
+	rootPath := "arch_config.toml"
+	installPath := filepath.Join("install", "arch_config.toml")
+
+	// Save to root location
+	if err := saveConfig(config, "Saving configuration to root...", rootPath); err != nil {
+		return fmt.Errorf("error saving to root: %v", err)
+	}
+
+	// Ensure the install directory exists
+	installDir := filepath.Dir(installPath)
+	if err := os.MkdirAll(installDir, os.ModePerm); err != nil {
+		return fmt.Errorf("error creating install directory: %v", err)
+	}
+
+	// Explicitly copy the file
+	if err := copyFile(rootPath, installPath); err != nil {
+		return fmt.Errorf("error copying config file: %v", err)
+	}
+
+	fmt.Printf("Configuration copied to %s\n", installPath)
+
+	// Verify that both files are identical
+	if err := verifyFiles(rootPath, installPath); err != nil {
+		return fmt.Errorf("verification error: %v", err)
+	}
+
+	fmt.Println("Configuration saved and verified in both locations.")
+	displayFileContents(rootPath, installPath)
+
+	return nil
+}
+
+func saveConfig(config map[string]interface{}, message string, filePath string) error {
 	fmt.Println(message)
-	f, err := os.Create("arch_config.toml")
+
+	// Ensure the directory exists
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return fmt.Errorf("error creating directory: %v", err)
+	}
+
+	f, err := os.Create(filePath)
 	if err != nil {
-		fmt.Printf("Error creating config file: %v\n", err)
-		return
+		return fmt.Errorf("error creating config file: %v", err)
 	}
 	defer f.Close()
 
-	encoder := toml.NewEncoder(f)
-	if err := encoder.Encode(config); err != nil {
-		fmt.Printf("Error encoding TOML: %v\n", err)
+	// Create the correct structure for the TOML file
+	tomlConfig := struct {
+		Install struct {
+			AutoRun bool `toml:"auto_run"`
+		} `toml:"install"`
+		Variables map[string]string `toml:"variables"`
+	}{
+		Install: struct {
+			AutoRun bool `toml:"auto_run"`
+		}{
+			AutoRun: config["install"].(map[string]bool)["auto_run"],
+		},
+		Variables: config["variables"].(map[string]string),
 	}
+
+	encoder := toml.NewEncoder(f)
+	encoder.Indent = "  "
+	if err := encoder.Encode(tomlConfig); err != nil {
+		return fmt.Errorf("error encoding TOML: %v", err)
+	}
+
+	fmt.Printf("Configuration saved to %s\n", filePath)
+	return nil
 }
 
 func printSummary(m model) {
@@ -901,16 +990,6 @@ func printSummary(m model) {
 	printSetting("Hostname", "hostname")
 	printSetting("Timezone", "timezone")
 	printSetting("Locale", "locale")
-	printSetting("Keymap", "keymap")
-	printSetting("Filesystem", "filesystem")
-	printSetting("Desktop Environment", "desktop_env")
-	printSetting("Disk Encryption", "disk_encryption")
-
-	fmt.Println("\nSystem Information:")
-	printSetting("CPU", "cpu_type")
-	printSetting("CPU Cores", "num_cpus")
-	printSetting("RAM", "ram_info")
-	printSetting("Install Drive", "install_drive")
 }
 
 func getPartitionSuffix(device string) string {
@@ -927,4 +1006,49 @@ func (m *model) findQuestionIndex(id string) int {
 		}
 	}
 	return -1
+}
+
+func loadTOMLConfig(filename string) (map[string]string, error) {
+	var config struct {
+		Variables map[string]string `toml:"variables"`
+	}
+	_, err := toml.DecodeFile(filename, &config)
+	if err != nil {
+		return nil, err
+	}
+	return config.Variables, nil
+}
+
+func verifyFiles(file1, file2 string) error {
+	content1, err := ioutil.ReadFile(file1)
+	if err != nil {
+		return fmt.Errorf("error reading %s: %v", file1, err)
+	}
+
+	content2, err := ioutil.ReadFile(file2)
+	if err != nil {
+		return fmt.Errorf("error reading %s: %v", file2, err)
+	}
+
+	if !bytes.Equal(content1, content2) {
+		return fmt.Errorf("configuration files are not identical")
+	}
+
+	return nil
+}
+
+func displayFileContents(file1, file2 string) {
+	content1, err := ioutil.ReadFile(file1)
+	if err != nil {
+		fmt.Printf("Error reading %s: %v\n", file1, err)
+	} else {
+		fmt.Printf("Contents of %s:\n%s\n\n", file1, string(content1))
+	}
+
+	content2, err := ioutil.ReadFile(file2)
+	if err != nil {
+		fmt.Printf("Error reading %s: %v\n", file2, err)
+	} else {
+		fmt.Printf("Contents of %s:\n%s\n\n", file2, string(content2))
+	}
 }

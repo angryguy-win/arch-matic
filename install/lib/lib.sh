@@ -472,6 +472,7 @@ load_config() {
     set +o allexport
 
     # Set default values for variables that might not be in the config file
+    export auto_run="${auto_run:-false}"
     export PARALLEL_JOBS="${PARALLEL_JOBS:-4}"
     export FORMAT_TYPE="${FORMAT_TYPE:-btrfs}"
     export COUNTRY_ISO="${COUNTRY_ISO:-US}"
@@ -567,15 +568,38 @@ read_config() {
     # Clear the existing cfg file
     true > "$cfg_file"
 
-    # Read the TOML file and write to the cfg file, removing quotes
-    while IFS='=' read -r key value; do
-        # Remove leading/trailing whitespace from the key
-        key=$(printf "%b" "$key" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    # Read the TOML file and write to the cfg file
+    local current_section=""
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Trim leading/trailing whitespace
+        line=$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
         
-        # Remove leading/trailing whitespace and quotes from the value
-        value=$(printf "%b" "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//;s/"$//')
-        
-        printf "%b\n" "${key}=${value}" >> "$cfg_file"
+        # Skip empty lines
+        [[ -z "$line" ]] && continue
+
+        # Check for section headers
+        if [[ "$line" =~ ^\[(.+)\]$ ]]; then
+            current_section="${BASH_REMATCH[1]}"
+            continue
+        fi
+
+        # Process key-value pairs
+        if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+            local key="${BASH_REMATCH[1]}"
+            local value="${BASH_REMATCH[2]}"
+            
+            # Remove leading/trailing whitespace from key and value
+            key=$(echo "$key" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            value=$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//;s/"$//')
+            
+            # For the 'install' section,
+            if [[ "$current_section" == "install" ]]; then
+                key="${key^^}"
+            fi
+
+            # Write to cfg file, making it shell-compatible without spaces around =
+            echo "${key}=\"${value}\"" >> "$cfg_file"
+        fi
     done < "$toml_file"
 
     print_message OK "Configuration loaded into: $cfg_file"
